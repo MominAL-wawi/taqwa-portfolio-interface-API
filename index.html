@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio Admin - CRUD Management</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-color: #2c5aa0;
+        --secondary-color: #1a365d;
+        --accent-color: #e53e3e;
+        --text-dark: #2d3748;
+        --text-light: #718096;
+        --bg-light: #f7fafc;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-light);
+      }
+
+      .admin-header {
+        background: linear-gradient(
+          135deg,
+          var(--primary-color) 0%,
+          var(--secondary-color) 100%
+        );
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+      }
+
+      .content-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+      }
+
+      .card-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        border-radius: 15px 15px 0 0;
+      }
+
+      .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+
+      .btn-danger {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+      }
+
+      .table-container {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-message {
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        display: none;
+      }
+
+      .status-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="admin-header">
+      <div class="container">
+        <h1 class="text-center mb-0">
+          <i class="fas fa-cogs me-3"></i>
+          Portfolio Admin Panel
+        </h1>
+        <p class="text-center mb-0 mt-2">
+          Manage Articles, Poems, Translations & More
+        </p>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Status Messages -->
+      <div id="statusMessage" class="status-message"></div>
+
+      <!-- Content Type Selector -->
+      <div class="content-card">
+        <div class="card-header">
+          <i class="fas fa-list me-2"></i>Content Management
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <label for="contentType" class="form-label"
+                >Select Content Type:</label
+              >
+              <select
+                class="form-select"
+                id="contentType"
+                onchange="loadContent()"
+              >
+                <option value="articlesData">Articles</option>
+                <option value="poemsData">Poems</option>
+                <option value="translationsData">Translations</option>
+                <option value="republishedArticlesData">
+                  Republished Articles
+                </option>
+                <option value="podcastsData">Podcasts</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <button class="btn btn-primary me-2" onclick="showAddForm()">
+                <i class="fas fa-plus me-2"></i>Add New
+              </button>
+              <button class="btn btn-success" onclick="loadContent()">
+                <i class="fas fa-refresh me-2"></i>Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add/Edit Form -->
+      <div class="content-card" id="formCard" style="display: none">
+        <div class="card-header">
+          <i class="fas fa-edit me-2"></i
+          ><span id="formTitle">Add New Item</span>
+        </div>
+        <div class="card-body">
+          <form id="contentForm">
+            <input type="hidden" id="editId" />
+            <div id="formFields"></div>
+            <div class="mt-3">
+              <button type="submit" class="btn btn-primary me-2">
+                <i class="fas fa-save me-2"></i>Save
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="hideForm()"
+              >
+                <i class="fas fa-times me-2"></i>Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Content List -->
+      <div class="content-card">
+        <div class="card-header">
+          <i class="fas fa-table me-2"></i>Content List
+          <span class="badge bg-light text-dark ms-2" id="itemCount"
+            >0 items</span
+          >
+        </div>
+        <div class="card-body">
+          <div class="table-container">
+            <table class="table table-striped">
+              <thead id="tableHeader"></thead>
+              <tbody id="tableBody">
+                <tr>
+                  <td colspan="100%" class="text-center">
+                    <div class="loading"></div>
+                    <span class="ms-2">Loading content...</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Firebase Configuration
+      const firebaseConfig = {
+        databaseURL:
+          "https://sistqwaportfolio-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+
+      let currentContentType = "articlesData";
+      let currentData = [];
+      let editingId = null;
+
+      // Form field configurations for different content types
+      const formConfigs = {
+        articlesData: [
+          { name: "title", label: "Title", type: "text", required: true },
+          { name: "url", label: "URL", type: "url", required: true },
+          {
+            name: "publication",
+            label: "Publication",
+            type: "text",
+            required: true,
+          },
+          { name: "date", label: "Date", type: "text", required: true },
+        ],
+        poemsData: [
+          { name: "title", label: "Title", type: "text", required: true },
+          { name: "url", label: "URL", type: "url", required: true },
+          {
+            name: "publication",
+            label: "Publication",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "description",
+            label: "Description",
+            type: "textarea",
+            required: true,
+          },
+        ],
+        translationsData: [
+          { name: "title", label: "Title", type: "text", required: true },
+          { name: "url", label: "URL", type: "url", required: true },
+          {
+            name: "publication",
+            label: "Publication",
+            type: "text",
+            required: true,
+          },
+          { name: "language", label: "Language", type: "text", required: true },
+        ],
+        republishedArticlesData: [
+          { name: "title", label: "Title", type: "text", required: true },
+          { name: "url", label: "URL", type: "url", required: true },
+          {
+            name: "originalPublication",
+            label: "Original Publication",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "republishedIn",
+            label: "Republished In",
+            type: "text",
+            required: true,
+          },
+          {
+            name: "description",
+            label: "Description",
+            type: "textarea",
+            required: true,
+          },
+        ],
+        podcastsData: [
+          { name: "title", label: "Title", type: "text", required: true },
+          {
+            name: "podcastName",
+            label: "Podcast Name",
+            type: "text",
+            required: true,
+          },
+          { name: "url", label: "URL", type: "url", required: true },
+          { name: "date", label: "Date", type: "text", required: true },
+          { name: "platform", label: "Platform", type: "text", required: true },
+        ],
+      };
+
+      // Load content from Firebase
+      function loadContent() {
+        currentContentType = document.getElementById("contentType").value;
+        showStatus("Loading content...", "info");
+
+        database
+          .ref(currentContentType)
+          .once("value")
+          .then((snapshot) => {
+            currentData = [];
+            const data = snapshot.val();
+
+            if (data) {
+              Object.keys(data).forEach((key) => {
+                currentData.push({ id: key, ...data[key] });
+              });
+            }
+
+            renderTable();
+            hideStatus();
+          })
+          .catch((error) => {
+            console.error("Error loading content:", error);
+            showStatus("Error loading content: " + error.message, "error");
+          });
+      }
+
+      // Render table
+      function renderTable() {
+        const config = formConfigs[currentContentType];
+        const headerHtml = `
+                <tr>
+                    ${config.map((field) => `<th>${field.label}</th>`).join("")}
+                    <th>Actions</th>
+                </tr>
+            `;
+
+        document.getElementById("tableHeader").innerHTML = headerHtml;
+
+        const bodyHtml = currentData
+          .map(
+            (item) => `
+                <tr>
+                    ${config
+                      .map(
+                        (field) => `
+                        <td>${
+                          field.type === "url"
+                            ? `<a href="${
+                                item[field.name] || ""
+                              }" target="_blank" class="text-truncate d-block" style="max-width: 200px;">${
+                                item[field.name] || ""
+                              }</a>`
+                            : `<span class="text-truncate d-block" style="max-width: 200px;">${
+                                item[field.name] || ""
+                              }</span>`
+                        }</td>
+                    `
+                      )
+                      .join("")}
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" onclick="editItem('${
+                          item.id
+                        }')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteItem('${
+                          item.id
+                        }')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `
+          )
+          .join("");
+
+        document.getElementById("tableBody").innerHTML =
+          bodyHtml ||
+          '<tr><td colspan="100%" class="text-center text-muted">No items found</td></tr>';
+        document.getElementById(
+          "itemCount"
+        ).textContent = `${currentData.length} items`;
+      }
+
+      // Show add form
+      function showAddForm() {
+        editingId = null;
+        document.getElementById("formTitle").textContent = "Add New Item";
+        document.getElementById("editId").value = "";
+        generateForm();
+        document.getElementById("formCard").style.display = "block";
+        document.getElementById("contentForm").reset();
+      }
+
+      // Edit item
+      function editItem(id) {
+        editingId = id;
+        const item = currentData.find((item) => item.id === id);
+        if (!item) return;
+
+        document.getElementById("formTitle").textContent = "Edit Item";
+        document.getElementById("editId").value = id;
+        generateForm();
+
+        // Fill form with existing data
+        const config = formConfigs[currentContentType];
+        config.forEach((field) => {
+          const element = document.getElementById(field.name);
+          if (element) {
+            element.value = item[field.name] || "";
+          }
+        });
+
+        document.getElementById("formCard").style.display = "block";
+      }
+
+      // Generate form fields
+      function generateForm() {
+        const config = formConfigs[currentContentType];
+        const formHtml = config
+          .map(
+            (field) => `
+                <div class="mb-3">
+                    <label for="${field.name}" class="form-label">
+                        ${field.label} ${
+              field.required ? '<span class="text-danger">*</span>' : ""
+            }
+                    </label>
+                    ${
+                      field.type === "textarea"
+                        ? `<textarea class="form-control" id="${
+                            field.name
+                          }" name="${field.name}" rows="3" ${
+                            field.required ? "required" : ""
+                          }></textarea>`
+                        : `<input type="${
+                            field.type
+                          }" class="form-control" id="${field.name}" name="${
+                            field.name
+                          }" ${field.required ? "required" : ""}>`
+                    }
+                </div>
+            `
+          )
+          .join("");
+
+        document.getElementById("formFields").innerHTML = formHtml;
+      }
+
+      // Hide form
+      function hideForm() {
+        document.getElementById("formCard").style.display = "none";
+        editingId = null;
+      }
+
+      // Handle form submission
+      document
+        .getElementById("contentForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const config = formConfigs[currentContentType];
+          const formData = {};
+
+          config.forEach((field) => {
+            const element = document.getElementById(field.name);
+            formData[field.name] = element.value.trim();
+          });
+
+          if (editingId) {
+            // Update existing item
+            database
+              .ref(`${currentContentType}/${editingId}`)
+              .update(formData)
+              .then(() => {
+                showStatus("Item updated successfully!", "success");
+                hideForm();
+                loadContent();
+              })
+              .catch((error) => {
+                showStatus("Error updating item: " + error.message, "error");
+              });
+          } else {
+            // Add new item
+            database
+              .ref(currentContentType)
+              .push(formData)
+              .then(() => {
+                showStatus("Item added successfully!", "success");
+                hideForm();
+                loadContent();
+              })
+              .catch((error) => {
+                showStatus("Error adding item: " + error.message, "error");
+              });
+          }
+        });
+
+      // Delete item
+      function deleteItem(id) {
+        if (!confirm("Are you sure you want to delete this item?")) return;
+
+        database
+          .ref(`${currentContentType}/${id}`)
+          .remove()
+          .then(() => {
+            showStatus("Item deleted successfully!", "success");
+            loadContent();
+          })
+          .catch((error) => {
+            showStatus("Error deleting item: " + error.message, "error");
+          });
+      }
+
+      // Show status message
+      function showStatus(message, type) {
+        const statusEl = document.getElementById("statusMessage");
+        statusEl.textContent = message;
+        statusEl.className = `status-message status-${
+          type === "error" ? "error" : type === "success" ? "success" : "info"
+        }`;
+        statusEl.style.display = "block";
+
+        if (type === "success") {
+          setTimeout(hideStatus, 3000);
+        }
+      }
+
+      // Hide status message
+      function hideStatus() {
+        document.getElementById("statusMessage").style.display = "none";
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", function () {
+        loadContent();
+      });
+    </script>
+  </body>
+</html>

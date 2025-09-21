@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Load JSON Data to Firebase</title>
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/all.min.css" rel="stylesheet" />
+    <style>
+      :root {
+        --primary-color: #2c5aa0;
+        --secondary-color: #1a365d;
+        --accent-color: #e53e3e;
+        --text-dark: #2d3748;
+        --text-light: #718096;
+        --bg-light: #f7fafc;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-light);
+      }
+
+      .admin-header {
+        background: linear-gradient(
+          135deg,
+          var(--primary-color) 0%,
+          var(--secondary-color) 100%
+        );
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+      }
+
+      .content-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 2rem;
+      }
+
+      .card-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        border-radius: 15px 15px 0 0;
+      }
+
+      .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+      }
+
+      .progress-container {
+        margin: 1rem 0;
+      }
+
+      .log-container {
+        max-height: 300px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: monospace;
+        font-size: 0.9rem;
+      }
+
+      .log-entry {
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0;
+      }
+
+      .log-success {
+        color: #28a745;
+      }
+      .log-error {
+        color: #dc3545;
+      }
+      .log-info {
+        color: #17a2b8;
+      }
+      .log-warning {
+        color: #ffc107;
+      }
+
+      .status-message {
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+      }
+
+      .status-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .status-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <div class="admin-header">
+      <div class="container">
+        <h1 class="text-center mb-0">
+          <i class="fas fa-upload me-3"></i>
+          Load JSON Data to Firebase
+        </h1>
+        <p class="text-center mb-0 mt-2">Import your existing portfolio data</p>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- JSON Input -->
+      <div class="content-card">
+        <div class="card-header">
+          <i class="fas fa-file-code me-2"></i>JSON Data Input
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="jsonInput" class="form-label"
+              >Paste your JSON data here:</label
+            >
+            <textarea
+              class="form-control"
+              id="jsonInput"
+              rows="10"
+              placeholder="Paste your JSON data here..."
+            ></textarea>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="clearExisting"
+              />
+              <label class="form-check-label" for="clearExisting">
+                Clear existing data before importing (⚠️ This will delete all
+                current data)
+              </label>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-lg" onclick="loadDataToFirebase()">
+            <i class="fas fa-cloud-upload-alt me-2"></i>Load Data to Firebase
+          </button>
+          <button
+            class="btn btn-success btn-lg ms-2"
+            onclick="loadSampleData()"
+          >
+            <i class="fas fa-magic me-2"></i>Load Sample Data
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div class="content-card" id="progressCard" style="display: none">
+        <div class="card-header">
+          <i class="fas fa-tasks me-2"></i>Import Progress
+        </div>
+        <div class="card-body">
+          <div class="progress-container">
+            <div class="progress">
+              <div
+                class="progress-bar"
+                id="progressBar"
+                role="progressbar"
+                style="width: 0%"
+              ></div>
+            </div>
+            <div class="mt-2">
+              <span id="progressText">Ready to import...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div class="content-card">
+        <div class="card-header">
+          <i class="fas fa-list-alt me-2"></i>Import Log
+          <button
+            class="btn btn-sm btn-outline-light float-end"
+            onclick="clearLog()"
+          >
+            <i class="fas fa-trash me-1"></i>Clear Log
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="log-container" id="logContainer">
+            <div class="log-entry log-info">Ready to import data...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="text-center mt-4">
+        <a href="index2.html" class="btn btn-outline-primary btn-lg">
+          <i class="fas fa-cogs me-2"></i>Go to CRUD Admin
+        </a>
+      </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    <script src="js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      // Firebase Configuration
+      const firebaseConfig = {
+        databaseURL:
+          "https://sistqwaportfolio-default-rtdb.asia-southeast1.firebasedatabase.app/",
+      };
+
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
+
+      // Sample data from your JSON
+      const sampleData = {
+        articlesData: [
+          {
+            title:
+              "Israeli Forces Bomb, Loot, Vandalize Our Homes in Gaza. We Long for Normal Life",
+            url: "https://truthout.org/articles/israeli-forces-bomb-loot-vandalize-our-homes-in-gaza-we-long-for-normal-life/",
+            publication: "TRUTHOUT",
+            date: "September 8, 2025",
+          },
+          {
+            title: "Airdropped Aid Is Crushing Starving People in Gaza",
+            url: "https://theintercept.com/2025/08/22/gaza-aid-airdrops/",
+            publication: "The Intercept",
+            date: "August 22, 2025",
+          },
+        ],
+        poemsData: [
+          {
+            title: "What the body remembers",
+            url: "https://wearenotnumbers.org/what-the-body-remembers/",
+            publication: "We Are Not Numbers",
+            description: "A powerful poem about memory and trauma",
+          },
+          {
+            title: "I Long for My Old World – A Poem from Gaza",
+            url: "https://www.palestinechronicle.com/i-long-for-my-old-world-a-poem-from-gaza/",
+            publication: "The Palestine Chronicle",
+            description: "A poem from Gaza about longing and loss",
+          },
+        ],
+        translationsData: [
+          {
+            title: "Ode à Rafah",
+            url: "https://www.chroniquepalestine.com/ode-a-rafah-alors-que-israeliens-ordonnent-nouvelle-fois-evacuation-ville/",
+            publication: "Chronique Palestine",
+            language: "French",
+          },
+        ],
+        republishedArticlesData: [
+          {
+            title: "Gaza Faces Ongoing Oppression",
+            url: "https://palestina-komitee.nl/israeli-forces-bomb-loot-vandalize-our-homes-in-gaza-we-long-for-normal-life",
+            originalPublication: "Truthout",
+            republishedIn: "Palestina Komitee (npkpress)",
+            description:
+              "Israeli Forces Bomb, Loot, Vandalize Our Homes in Gaza – We Long for Normal Life",
+          },
+        ],
+        podcastsData: [
+          {
+            title:
+              "We have education as our weapon' - EAP for Social Justice podcast from Gaza",
+            podcastName: "From Activism to Actionable: EAP for Social Justice",
+            url: "https://open.spotify.com/episode/6P3RcD6uQJFJZWZ0aiAI3B?si:0Be_wq0CRzWlXmCn_qV75w",
+            date: "11/2/2025",
+            platform: "Spotify",
+          },
+        ],
+      };
+
+      // Log functions
+      function addLog(message, type = "info") {
+        const logContainer = document.getElementById("logContainer");
+        const logEntry = document.createElement("div");
+        logEntry.className = `log-entry log-${type}`;
+        logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function clearLog() {
+        document.getElementById("logContainer").innerHTML =
+          '<div class="log-entry log-info">Log cleared...</div>';
+      }
+
+      // Progress functions
+      function updateProgress(current, total, message) {
+        const progressBar = document.getElementById("progressBar");
+        const progressText = document.getElementById("progressText");
+        const percentage = Math.round((current / total) * 100);
+
+        progressBar.style.width = percentage + "%";
+        progressBar.textContent = percentage + "%";
+        progressText.textContent = message;
+
+        document.getElementById("progressCard").style.display = "block";
+      }
+
+      // Load sample data
+      function loadSampleData() {
+        document.getElementById("jsonInput").value = JSON.stringify(
+          sampleData,
+          null,
+          2
+        );
+        addLog("Sample data loaded into textarea", "success");
+      }
+
+      // Main function to load data to Firebase
+      async function loadDataToFirebase() {
+        const jsonInput = document.getElementById("jsonInput").value.trim();
+        const clearExisting = document.getElementById("clearExisting").checked;
+
+        if (!jsonInput) {
+          addLog("Please paste JSON data first", "error");
+          return;
+        }
+
+        let data;
+        try {
+          data = JSON.parse(jsonInput);
+          addLog("JSON data parsed successfully", "success");
+        } catch (error) {
+          addLog("Invalid JSON format: " + error.message, "error");
+          return;
+        }
+
+        const dataTypes = Object.keys(data);
+        let totalOperations = 0;
+        let completedOperations = 0;
+
+        // Count total operations
+        dataTypes.forEach((type) => {
+          if (Array.isArray(data[type])) {
+            totalOperations += data[type].length;
+            if (clearExisting) totalOperations += 1; // For clearing operation
+          }
+        });
+
+        addLog(
+          `Starting import of ${totalOperations} items across ${dataTypes.length} categories`,
+          "info"
+        );
+
+        try {
+          for (const dataType of dataTypes) {
+            if (!Array.isArray(data[dataType])) {
+              addLog(`Skipping ${dataType} - not an array`, "warning");
+              continue;
+            }
+
+            addLog(`Processing ${dataType}...`, "info");
+
+            // Clear existing data if requested
+            if (clearExisting) {
+              await database.ref(dataType).remove();
+              addLog(`Cleared existing ${dataType}`, "warning");
+              completedOperations++;
+              updateProgress(
+                completedOperations,
+                totalOperations,
+                `Cleared ${dataType}`
+              );
+            }
+
+            // Add new data
+            for (const item of data[dataType]) {
+              try {
+                await database.ref(dataType).push(item);
+                completedOperations++;
+                updateProgress(
+                  completedOperations,
+                  totalOperations,
+                  `Added item to ${dataType}`
+                );
+                addLog(
+                  `Added: ${item.title || item.name || "Untitled"}`,
+                  "success"
+                );
+              } catch (error) {
+                addLog(
+                  `Error adding item to ${dataType}: ${error.message}`,
+                  "error"
+                );
+                completedOperations++;
+              }
+            }
+
+            addLog(
+              `Completed ${dataType} - ${data[dataType].length} items`,
+              "success"
+            );
+          }
+
+          addLog("🎉 Import completed successfully!", "success");
+          updateProgress(totalOperations, totalOperations, "Import completed!");
+        } catch (error) {
+          addLog("Import failed: " + error.message, "error");
+        }
+      }
+
+      // Initialize
+      document.addEventListener("DOMContentLoaded", function () {
+        addLog("Page loaded - Ready to import data", "info");
+      });
+    </script>
+  </body>
+</html>
