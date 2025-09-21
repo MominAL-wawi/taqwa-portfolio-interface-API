@@ -494,7 +494,10 @@
             // Add new item
             database
               .ref(currentContentType)
-              .push(formData)
+              .push({
+                ...formData, // البيانات اللي جمعتها من الفورم
+                createdAt: Date.now(), // وقت الإنشاء
+              })
               .then(() => {
                 showStatus("Item added successfully!", "success");
                 hideForm();
