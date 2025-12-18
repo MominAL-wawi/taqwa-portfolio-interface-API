@@ -113,7 +113,7 @@
           Portfolio Admin Panel
         </h1>
         <p class="text-center mb-0 mt-2">
-          Manage Articles, Poems, Translations & More
+          Manage Articles, Poems, Translations, Journey & More
         </p>
       </div>
     </div>
@@ -145,6 +145,7 @@
                   Republished Articles
                 </option>
                 <option value="podcastsData">Podcasts</option>
+                <option value="journeyData">Journey Links</option>
               </select>
             </div>
             <div class="col-md-6 d-flex align-items-end">
@@ -304,6 +305,16 @@
           { name: "url", label: "URL", type: "url", required: true },
           { name: "date", label: "Date", type: "text", required: true },
           { name: "platform", label: "Platform", type: "text", required: true },
+        ],
+        journeyData: [
+          { name: "text", label: "Link Text", type: "text", required: true },
+          { name: "url", label: "URL", type: "url", required: true },
+          {
+            name: "order",
+            label: "Display Order",
+            type: "number",
+            required: false,
+          },
         ],
       };
 
@@ -495,8 +506,8 @@
             database
               .ref(currentContentType)
               .push({
-                ...formData, // البيانات اللي جمعتها من الفورم
-                createdAt: Date.now(), // وقت الإنشاء
+                ...formData,
+                createdAt: Date.now(),
               })
               .then(() => {
                 showStatus("Item added successfully!", "success");
